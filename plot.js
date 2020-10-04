@@ -1,5 +1,22 @@
-function plot_polygon(poly, mark, linecolor) {
+// 绘制一个简单闭多边形
+function plot_polygon(poly, color) {
     context.beginPath()
+    context.strokeStyle = color
+        context.fillStyle = color
+    for (let i = 0; i < poly.length - 1; i++) {
+        context.moveTo(poly[i][0], poly[i][1])
+        context.arc(poly[i][0], poly[i][1], 5, 0, 2 * Math.PI, false)
+        context.fill()
+        context.stroke()
+        context.moveTo(poly[i][0], poly[i][1])
+        context.lineTo(poly[i + 1][0], poly[i + 1][1])
+        context.stroke()
+    }
+}
+
+
+// 调试用函数，用来绘制所有交点（入点和出点用不同颜色标识）
+function plot_polygon_with_mark(poly, mark, linecolor) {
     for (let i = 0; i < poly.length - 1; i++) {
         let color = "blue"
         if (mark[i] == 1) {
@@ -14,6 +31,7 @@ function plot_polygon(poly, mark, linecolor) {
         context.arc(poly[i][0], poly[i][1], 5, 0, 2 * Math.PI, false)
         context.fill()
         context.stroke()
+
         context.beginPath()
         context.strokeStyle = linecolor
         context.moveTo(poly[i][0], poly[i][1])
@@ -22,33 +40,59 @@ function plot_polygon(poly, mark, linecolor) {
     }
 }
 
-status = 0 // 0, 1, 2, 3, 4 分别代表没有交互，画主多边形且没有未闭合的环，画主多边形且有未闭合的环，画裁剪多边形且没有未闭合的环，画裁剪多边形且有未闭合的环
 
-function draw_major() {
-    status = 1
-}
+// 表示状态的全局变量
+// 0, 1, 2, 3, 4 分别代表没有交互，画主多边形且没有未闭合的环，画主多边形且有未闭合的环，画裁剪多边形且没有未闭合的环，画裁剪多边形且有未闭合的环
+var status = 0 
 
-function draw_cut() {
-    status = 3
-}
+// 存储多边形点的列表
+var major_points = []
+var cut_points = []
 
-function cut() {
-    let result = polygon_polygon_intersect(major_points, cut_points)
-    let points = result['points']
-    let marks = result['marks']
-    plot_polygon(points, marks, "green")
-}
 
-major_points = []
-cut_points = []
-
-// 获得 canvas.context
+// 获得画图板有关句柄
 var canvas = document.getElementById("quad")
 var context = canvas.getContext("2d")
 
 context.fillStyle = "white"
 context.lineWidth = 2
 
+
+// 按钮响应函数
+function draw_major() {
+    status = 1
+}
+
+
+function draw_cut() {
+    status = 3
+}
+
+
+function cut() {
+    // 调试用代码
+    // let result = polygon_polygon_intersect(major_points, cut_points)
+    // let points = result['points']
+    // let marks = result['marks']
+    // plot_polygon_with_mark(points, marks, "green")
+
+    let cut_result = weiler_atherton(major_points, cut_points)
+    console.log(cut_result)
+    for (let r of cut_result) {
+        plot_polygon(r, "green")
+    }
+}
+
+
+function clear_all() {
+    major_points = []
+    cut_points = []
+    status = 0
+    context.clearRect(0, 0, canvas.width, canvas.height)
+}
+
+
+// 设置绘图板点击的响应事件
 canvas.onmousedown = function(e) {
     x = e.clientX - canvas.offsetLeft
     y = e.clientY - canvas.offsetTop

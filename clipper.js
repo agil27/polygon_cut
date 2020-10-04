@@ -7,6 +7,7 @@ function cross_product(a, b, c) {
 }
 
 
+// 判断两条线段是否相交
 // ref: http://www.cppblog.com/wicbnu/archive/2009/08/24/94225.html
 function is_intersected(p, q) {
     let a = p[0]
@@ -20,6 +21,7 @@ function is_intersected(p, q) {
 }
 
 
+// 计算两条直线的交点
 // ref: https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_points_on_each_line
 function lineseg_intersect(p, q) {
     let x1 = p[0][0], y1 = p[0][1]
@@ -36,6 +38,7 @@ function lineseg_intersect(p, q) {
 }
 
 
+// 计算一条直线与一个简单闭多边形（闭环）的交点
 function lineseg_ring_intersect(p, r) {
     points = []
     for (let i = 0; i < r.length - 1; i++) {
@@ -49,6 +52,7 @@ function lineseg_ring_intersect(p, r) {
 }
 
 
+// 计算一条直线与一个含闭环的多边形的交点
 function lineseg_polygon_intersect(l, p) {
     let points = [l[0]]
 
@@ -58,6 +62,7 @@ function lineseg_polygon_intersect(l, p) {
         points = points.concat(lineseg_ring_intersect(l, r))
     }
 
+    // 按照距离出发点的远近排列交点，这样入点出点一定是交替出现的
     points.sort(function(a, b) {
         let dxa = Math.abs(a[0] - x)
         let dxb = Math.abs(b[0] - x)
@@ -91,6 +96,7 @@ function lineseg_polygon_intersect(l, p) {
 }
 
 
+// 计算一个闭环与一个多边形的交点
 function ring_polygon_intersect(r, p) {
     let len = r.length
     let points = []
@@ -109,6 +115,7 @@ function ring_polygon_intersect(r, p) {
 }
 
 
+// 计算多边形与多边形的交点，最后返回结果是一个点列表和每个点的标记（入点，出点，顶点）
 function polygon_polygon_intersect(p, q) {
     let points = []
     let marks = []
@@ -144,6 +151,7 @@ function orient(p, q, r) {
 
 
 // 水平射线法判断点是否在一个简单闭环内
+// ref: https://www.geeksforgeeks.org/how-to-check-if-a-given-point-lies-inside-a-polygon/
 function point_inside_ring(p, r) {
     let n = r.length - 1
     if (n < 3) return false
@@ -185,9 +193,54 @@ function point_inside_polygon(point, poly) {
 }
 
 
+// 判断两点是否相同
+function identical_point(p, q) {
+    return (Math.abs(p[0] - q[0]) < 1e-6) && (Math.abs(p[1] - q[1]) < 1e-6)
+}
+
+
+// 将两张表的交点建立对应，方便查询
+function link_list(major_list, major_marks, cut_list, cut_marks) {
+    map_m2c = []
+    map_c2m = []
+    for (let i = 0; i < major_list.length; i++) {
+        for (let j = 0; j < cut_list.length; j++) {
+            if (major_marks[i] != 0 && cut_marks[j] != 0 && identical_point(major_list[i], cut_list[j])) {
+                map_m2c[i] = j
+                map_c2m[j] = i
+            }
+        }    
+    }
+    return [map_m2c, map_c2m]
+}
+
+
+// 核心算法
 function weiler_atherton(major_points, cut_points) {
-    major_list = polygon_polygon_intersect(major_points, cut_points)
-    cut_list = polygon_polygon_intersect(cut_points, major_points)
+    major_result= polygon_polygon_intersect(major_points, cut_points)
+    cut_result = polygon_polygon_intersect(cut_points, major_points)
+
+    major_list = major_result['points']
+    major_marks = major_result['marks']
+    cut_list = cut_result['points']
+    cut_marks = cut_result['marks']
+
+    // 裁剪多边形列表中入点出点调整
+    for (let i = 0; i < cut_marks.length; i++) {
+        if (cut_marks[i] > 0) {
+            cut_marks[i] = 3 - cut_marks[i]
+        }
+    }
+
+    link_result = link_list(major_list, major_marks, cut_list, cut_marks)
+
+    console.log(major_list)
+    console.log(cut_list)
+    console.log(map_m2c)
+    console.log(map_c2m)
+
+    map_m2c = link_result[0]
+    map_c2m = link_result[1]
 
     result = []
     visited = []
@@ -196,13 +249,79 @@ function weiler_atherton(major_points, cut_points) {
         visited.push(false)
     }
     
-    while (true) {
-        for (let i = 0; i < visited.length; i++) {
-            if (!visited[i]) {
-                // 如果有未追踪的点，则开始沿着两张表追踪
-                continue
+    for (let i = 0; i < visited.length; i++) {
+        if (!visited[i] && Number(major_marks[i]) !== 0) {
+            // 如果有未追踪的交点，则开始沿着两张表追踪
+            first_index = i
+            current_index = i
+            current_list = 'major'
+            ring = []
+            while (true) {
+                console.log(current_list, current_index)
+                if (current_list === 'major') {
+                    ring.push(major_list[current_index])
+                    vertex_type = major_marks[current_index]
+                    visited[current_index] = true
+
+                    if (ring.length > 1 && current_index == first_index) {
+                        // 回到了起点，形成了闭环
+                        break
+                    }
+
+                    if (vertex_type == 0) {
+                        // 如果是顶点，判断一下是不是到了列表末端
+                        for (let j = 0; j < major_list.length - 1; j++) {
+                            if (identical_point(major_list[j], major_list[current_index])) {
+                                current_index = j
+                                break
+                            }
+                        }
+                        current_index++
+                        continue
+                    } else if (vertex_type == 1) {
+                        // 如果是入点，继续沿着主多边形追踪
+                        current_index++
+                        continue
+                    } else {
+                        // 如果是出点，在裁剪多边形中追踪
+                        current_list = 'cut'
+                        current_index = map_m2c[current_index] + 1
+                        continue
+                    }
+                } else {
+                    ring.push(cut_list[current_index])
+                    vertex_type = cut_marks[current_index]
+                    if (ring.length > 1 && map_c2m[current_index] == first_index) {
+                        // 回到了起点，形成了闭环
+                        break
+                    }
+                    if (vertex_type == 0) {
+                        // 如果是顶点，判断一下是不是到了列表末端
+                        for (let j = 0; j < cut_list.length - 1; j++) {   
+                            if (identical_point(cut_list[j], cut_list[current_index])) {
+                                current_index = j
+                                break
+                            }
+                        }
+                        current_index++
+                        continue
+                    } else if (vertex_type == 2) {
+                        // 如果是出点，继续沿着裁剪多边形追踪
+                        visited[map_c2m[current_index]] = true
+                        current_index++
+                        continue
+                    } else {
+                        // 如果是入点，在主多边形中追踪
+                        visited[map_c2m[current_index]] = true
+                        current_list = 'major'
+                        current_index = map_c2m[current_index] + 1
+                        continue
+                    }
+                }
             }
+            result.push(ring)
         }
-        break
     }
+    
+    return result
 }
