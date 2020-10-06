@@ -77,7 +77,9 @@ function cut() {
     // plot_polygon_with_mark(points, marks, "green")
 
     let cut_result = weiler_atherton(major_points, cut_points)
-    console.log(cut_result)
+
+    // console.log(cut_result)
+    
     for (let r of cut_result) {
         plot_polygon(r, "green")
     }

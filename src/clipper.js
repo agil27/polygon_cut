@@ -174,6 +174,34 @@ function point_inside_ring(p, r) {
 }
 
 
+// 判断一个环是顺时针还是逆时针
+function clockwise(r) {
+    // 找到最左端的点，一定是凸点
+    let min_x = INF
+    let convex_index = -1
+    for (let i = 0; i < r.length - 1; i++) {
+        if (r[i][0] < min_x) {
+            convex_index = i
+            min_x = r[i][0]
+        }
+    }
+
+    let prev_index = convex_index - 1
+    
+    // 如果恰好是第一个或最后一个点
+    if (convex_index == 0) {
+        prev_index = r.length - 2
+    }
+    
+    let next_index = convex_index + 1
+    
+    // 判断该点与前后两点的位置关系
+    let orientation = Number(orient(r[prev_index], r[convex_index], r[next_index]))
+
+    return (orientation === 2)
+}
+
+
 // 判断一个点是否在多边形内
 function point_inside_polygon(point, poly) {
     for (let ring of poly) {
@@ -181,12 +209,7 @@ function point_inside_polygon(point, poly) {
             return false
         }
     
-        let orientation = Number(orient(ring[0], ring[1], ring[2])) // 判断是内环还是外环
-
-        if (orientation === 0) return false
-    
-        f = point_inside_ring(point, ring)
-        if (orientation === 2) f = !f
+        f = point_inside_ring(point, ring) ^ clockwise(ring)
         if (!f) return false
     }
     return true
@@ -234,10 +257,11 @@ function weiler_atherton(major_points, cut_points) {
 
     link_result = link_list(major_list, major_marks, cut_list, cut_marks)
 
-    console.log(major_list)
-    console.log(cut_list)
-    console.log(map_m2c)
-    console.log(map_c2m)
+    // 调试代码
+    // console.log(major_list)
+    // console.log(cut_list)
+    // console.log(map_m2c)
+    // console.log(map_c2m)
 
     map_m2c = link_result[0]
     map_c2m = link_result[1]
@@ -257,7 +281,8 @@ function weiler_atherton(major_points, cut_points) {
             current_list = 'major'
             ring = []
             while (true) {
-                console.log(current_list, current_index)
+                // 调试代码
+                // console.log(current_list, current_index)
                 if (current_list === 'major') {
                     ring.push(major_list[current_index])
                     vertex_type = major_marks[current_index]
