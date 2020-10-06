@@ -22,8 +22,8 @@
    
 4. 裁剪多边形和主多边形都含内环
 
-	<img  src='img/demo4.png' width=800>
+	<img  src='img/demo4.PNG' width=800>
 
 5. 两个外环的裁剪多边形
 
-   <img src='img/demo5.png' width=800>
+   <img src='img/demo5.PNG' width=800>
